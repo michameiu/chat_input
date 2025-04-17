@@ -22,6 +22,63 @@ enum RecordingState {
   recording,
 }
 
+/// Color options for customizing the InputWidget appearance
+class ColorOptions {
+  /// Background color of the input field
+  final Color? fieldColor;
+
+  /// Color of the microphone icon
+  final Color? micColor;
+
+  /// Color of the attachment icon
+  final Color? attachmentIconColor;
+
+  /// Color of hint text
+  final Color? hintTextColor;
+
+  /// Color of the recording timer text
+  final Color? timerTextColor;
+
+  /// Color of the send button
+  final Color? sendButtonColor;
+
+  /// Color of icons on primary colored backgrounds
+  final Color? onPrimaryColor;
+
+  /// Color for error states (like recording deletion)
+  final Color? errorColor;
+
+  /// Color for shadows
+  final Color? shadowColor;
+
+  const ColorOptions({
+    this.fieldColor,
+    this.micColor,
+    this.attachmentIconColor,
+    this.hintTextColor,
+    this.timerTextColor,
+    this.sendButtonColor,
+    this.onPrimaryColor,
+    this.errorColor,
+    this.shadowColor,
+  });
+
+  /// Creates a ColorOptions instance from the current theme
+  factory ColorOptions.fromTheme(ThemeData theme) {
+    return ColorOptions(
+      fieldColor: theme.cardColor,
+      micColor: theme.colorScheme.primary,
+      attachmentIconColor: theme.hintColor,
+      hintTextColor: theme.hintColor,
+      timerTextColor: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+      sendButtonColor: theme.colorScheme.primary,
+      onPrimaryColor: theme.colorScheme.onPrimary,
+      errorColor: theme.colorScheme.error,
+      shadowColor: theme.shadowColor,
+    );
+  }
+}
+
 class InputWidget extends StatefulWidget {
   final void Function(File audioFile, Duration duration) onSendAudio;
   final Function(String text) onSendText;
@@ -32,9 +89,10 @@ class InputWidget extends StatefulWidget {
   final EdgeInsetsGeometry? containerMargin;
   EdgeInsetsGeometry? attachmentDialogMargin;
   final EdgeInsetsGeometry? containerPadding;
-  final Color? fieldColor;
+
+  /// Color options for customizing the widget appearance
+  final ColorOptions? colorOptions;
   final Widget? micIcon;
-  final Color? micColor;
 
   InputWidget({
     Key? key,
@@ -45,9 +103,8 @@ class InputWidget extends StatefulWidget {
     this.onError,
     this.containerPadding,
     this.containerMargin,
-    this.fieldColor,
     this.micIcon,
-    this.micColor,
+    this.colorOptions,
   }) : super(key: key);
 
   @override
@@ -56,9 +113,7 @@ class InputWidget extends StatefulWidget {
 
 class _InputWidgetState extends State<InputWidget> {
   final TextEditingController _textEditingController = TextEditingController();
-  final _audioRecorder = AudioRecorder(
-
-  );
+  final _audioRecorder = AudioRecorder();
 
   bool _showMike = true;
   RecordingState _recordingState = RecordingState.ready;
@@ -67,6 +122,9 @@ class _InputWidgetState extends State<InputWidget> {
   bool _voiceCanceled = false;
   late Uuid _uuid;
   late File _recordedFile;
+
+  ColorOptions get _colors =>
+      widget.colorOptions ?? ColorOptions.fromTheme(Theme.of(context));
 
   @override
   void initState() {
@@ -113,8 +171,9 @@ class _InputWidgetState extends State<InputWidget> {
 
     if (_recordingState == RecordingState.ready) {
       try {
-        final String path = await getApplicationCacheDirectory()
-            .then((result) => result.path) + "${_uuid.v4()}.m4a";
+        final String path =
+            await getApplicationCacheDirectory().then((result) => result.path) +
+                "${_uuid.v4()}.m4a";
         if (await _audioRecorder.hasPermission()) {
           await _audioRecorder.start(
             RecordConfig(),
@@ -187,13 +246,15 @@ class _InputWidgetState extends State<InputWidget> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: widget.fieldColor ?? Colors.white,
+                    color: _colors.fieldColor ?? Theme.of(context).cardColor,
                     borderRadius: const BorderRadius.all(Radius.circular(50)),
                     boxShadow: [
                       BoxShadow(
                         spreadRadius: 5,
                         blurRadius: 5,
-                        color: Colors.grey.withOpacity(.1),
+                        color: (_colors.shadowColor ??
+                                Theme.of(context).shadowColor)
+                            .withOpacity(.1),
                       )
                     ],
                   ),
@@ -208,60 +269,77 @@ class _InputWidgetState extends State<InputWidget> {
             alignment: Alignment.centerRight,
             child: _showMike
                 ? Transform.translate(
-              offset: Offset(_xTranslation, 0),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_recordingState == RecordingState.recording &&
-                      !_voiceCanceled)
-                    Shimmer.fromColors(
-                      baseColor: Colors.grey.withOpacity(.8),
-                      highlightColor: Colors.blue,
-                      period: const Duration(milliseconds: 1000),
-                      direction: ShimmerDirection.rtl,
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.keyboard_double_arrow_left,
-                            color: Colors.black54,
-                          ),
-                          Text(
-                            "Slide to cancel".toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.black54,
-                              overflow: TextOverflow.clip,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                    offset: Offset(_xTranslation, 0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_recordingState == RecordingState.recording &&
+                            !_voiceCanceled)
+                          Shimmer.fromColors(
+                            baseColor: (_colors.timerTextColor ??
+                                    Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.color ??
+                                    Colors.grey)
+                                .withOpacity(.8),
+                            highlightColor: _colors.sendButtonColor ??
+                                Theme.of(context).colorScheme.primary,
+                            period: const Duration(milliseconds: 1000),
+                            direction: ShimmerDirection.rtl,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.keyboard_double_arrow_left,
+                                  color: _colors.timerTextColor ??
+                                      Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.color
+                                          ?.withOpacity(0.6),
+                                ),
+                                Text(
+                                  "Slide to cancel".toUpperCase(),
+                                  style: TextStyle(
+                                    color: _colors.timerTextColor ??
+                                        Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.color
+                                            ?.withOpacity(0.6),
+                                    overflow: TextOverflow.clip,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                        const SizedBox(width: 30),
+                        MikeWidget(
+                          onSlide: (double value) {
+                            setState(() {
+                              _xTranslation = value;
+                            });
+                          },
+                          onStopRecording: (canceled) {
+                            if (canceled) {
+                              setState(() {
+                                _voiceCanceled = true;
+                                _xTranslation = 0;
+                              });
+                            } else {
+                              _stopRecording(canceled: canceled);
+                            }
+                          },
+                          startRecording: _startRecording,
+                          micColor: _colors.micColor,
+                          recording:
+                              _recordingState == RecordingState.recording,
+                        ),
+                      ],
                     ),
-                  const SizedBox(width: 30),
-                  MikeWidget(
-                    onSlide: (double value) {
-                      setState(() {
-                        _xTranslation = value;
-                      });
-                    },
-                    onStopRecording: (canceled) {
-                      if (canceled) {
-                        setState(() {
-                          _voiceCanceled = true;
-                          _xTranslation = 0;
-                        });
-                      } else {
-                        _stopRecording(canceled: canceled);
-                      }
-                    },
-                    startRecording: _startRecording,
-                    micColor: widget.micColor,
-                    recording:
-                    _recordingState == RecordingState.recording,
-                  ),
-                ],
-              ),
-            )
+                  )
                 : _sendWidget(),
           ),
         ],
@@ -275,21 +353,21 @@ class _InputWidgetState extends State<InputWidget> {
       children: [
         IconButton(
           onPressed: _showHideAttachmentSheet,
-          icon: const Icon(
+          icon: Icon(
             Icons.attach_file,
             size: 25,
-            color: Colors.grey,
+            color: _colors.attachmentIconColor,
           ),
         ),
         Flexible(
           flex: 4,
           child: TextFormField(
             onChanged: _onChangeText,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               border: InputBorder.none,
               hintText: "Type a message",
               hintStyle: TextStyle(
-                color: Colors.black26,
+                color: _colors.hintTextColor,
                 fontSize: 15,
               ),
             ),
@@ -308,30 +386,31 @@ class _InputWidgetState extends State<InputWidget> {
       children: [
         !_voiceCanceled
             ? BlinkingWidget(
-          child: widget.micIcon ??
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.mic,
-                  size: 30,
-                  color: Colors.red,
-                ),
-              ),
-          duration: const Duration(milliseconds: 500),
-        )
+                child: widget.micIcon ??
+                    IconButton(
+                      onPressed: () {},
+                      icon: Icon(
+                        Icons.mic,
+                        size: 30,
+                        color: _colors.errorColor,
+                      ),
+                    ),
+                duration: const Duration(milliseconds: 500),
+              )
             : AnimatedMic(
-          onAnimationCompleted: () {
-            setState(() {
-              _voiceCanceled = false;
-              _stopRecording(canceled: true);
-            });
-          },
-        ),
+                onAnimationCompleted: () {
+                  setState(() {
+                    _voiceCanceled = false;
+                    _stopRecording(canceled: true);
+                  });
+                },
+                colorOptions: _colors,
+              ),
         const SizedBox(width: 10),
         Text(
           formattedTime,
-          style: const TextStyle(
-            color: Colors.black54,
+          style: TextStyle(
+            color: _colors.timerTextColor,
             fontWeight: FontWeight.bold,
             fontSize: 15,
           ),
@@ -370,16 +449,17 @@ class _InputWidgetState extends State<InputWidget> {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(.2),
+              color: (_colors.shadowColor ?? Theme.of(context).shadowColor)
+                  .withOpacity(.2),
               blurRadius: 3,
               spreadRadius: 3,
             ),
           ],
           borderRadius: const BorderRadius.all(Radius.circular(50)),
-          color: Colors.blue,
+          color: _colors.sendButtonColor,
         ),
         padding: const EdgeInsets.all(5),
-        child: const Icon(Icons.send, size: 25, color: Colors.white),
+        child: Icon(Icons.send, size: 25, color: _colors.onPrimaryColor),
       ),
     );
   }
@@ -389,9 +469,11 @@ class AnimatedMic extends StatefulWidget {
   const AnimatedMic({
     super.key,
     required this.onAnimationCompleted,
+    this.colorOptions,
   });
 
   final Function onAnimationCompleted;
+  final ColorOptions? colorOptions;
 
   @override
   State<AnimatedMic> createState() => _AnimatedMicState();
@@ -417,44 +499,51 @@ class _AnimatedMicState extends State<AnimatedMic>
 
   @override
   Widget build(BuildContext context) {
+    final colors =
+        widget.colorOptions ?? ColorOptions.fromTheme(Theme.of(context));
     return SizedBox(
       child: Stack(
         alignment: Alignment.center,
         children: [
           IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.mic,
-                size: 30,
-                color: Colors.red,
-              ))
+            onPressed: () {},
+            icon: Icon(
+              Icons.mic,
+              size: 30,
+              color: colors.errorColor,
+            ),
+          )
               .animate()
               .rotate(alignment: Alignment.center)
               .moveY(
-              curve: Curves.decelerate,
-              begin: 0,
-              end: -200,
-              duration: const Duration(milliseconds: 500))
+                  curve: Curves.decelerate,
+                  begin: 0,
+                  end: -200,
+                  duration: const Duration(milliseconds: 500))
               .callback(callback: (v) {
-            showBin = true;
-            setState(() {});
-            print("up animation completed");
-          })
+                showBin = true;
+                setState(() {});
+                print("up animation completed");
+              })
               .then()
               .moveY(
-              begin: 0,
-              end: 200,
-              duration: const Duration(milliseconds: 500))
+                  begin: 0,
+                  end: 200,
+                  duration: const Duration(milliseconds: 500))
               .fadeOut(duration: const Duration(milliseconds: 500))
               .callback(callback: (v) {
-            print("down animation completed");
-            _controller?.forward();
-          }),
+                print("down animation completed");
+                _controller?.forward();
+              }),
           if (showBin)
-            const Icon(Icons.delete, color: Colors.red, size: 30)
+            Icon(
+              Icons.delete,
+              color: colors.errorColor,
+              size: 30,
+            )
                 .animate()
                 .moveY(
-                begin: 100, end: 0, duration: Duration(milliseconds: 300))
+                    begin: 100, end: 0, duration: Duration(milliseconds: 300))
                 .animate(controller: _controller, autoPlay: false)
                 .shake()
                 .callback(callback: (v) {
@@ -479,8 +568,8 @@ class MikeWidget extends StatefulWidget {
     required this.startRecording,
     required this.onStopRecording,
     required this.recording,
-    this.micColor,
     required this.onSlide,
+    this.micColor,
   });
 
   @override
@@ -499,9 +588,9 @@ class _MikeWidgetState extends State<MikeWidget> {
     _buttonSize = 35;
 
     EasyThrottle.throttle('audio_debounce', const Duration(milliseconds: 500),
-            () {
-          widget.onStopRecording(canceled);
-        });
+        () {
+      widget.onStopRecording(canceled);
+    });
   }
 
   get buttonSize => _buttonSize;
@@ -528,6 +617,7 @@ class _MikeWidgetState extends State<MikeWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Transform.translate(
       offset: Offset(xTranslate, 0),
       child: GestureDetector(
@@ -545,10 +635,7 @@ class _MikeWidgetState extends State<MikeWidget> {
             return;
           }
           if (details.localPosition.dx <
-              -MediaQuery
-                  .of(context)
-                  .size
-                  .width / 6) {
+              -MediaQuery.of(context).size.width / 6) {
             canceled = true;
             onStopRecording();
             return;
@@ -571,16 +658,20 @@ class _MikeWidgetState extends State<MikeWidget> {
           decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
-                  color: Colors.grey.withOpacity(.1),
-                  blurRadius: 5,
-                  spreadRadius: 5)
+                color: theme.shadowColor.withOpacity(.1),
+                blurRadius: 5,
+                spreadRadius: 5,
+              )
             ],
             borderRadius: const BorderRadius.all(Radius.circular(50)),
-            color: widget.micColor ??
-                Colors.blue, // You can change the color accordingly.
+            color: widget.micColor ?? theme.colorScheme.primary,
           ),
           padding: const EdgeInsets.all(5),
-          child: const Icon(Icons.mic, size: 25, color: Colors.white),
+          child: Icon(
+            Icons.mic,
+            size: 25,
+            color: theme.colorScheme.onPrimary,
+          ),
         ),
       ),
     );
