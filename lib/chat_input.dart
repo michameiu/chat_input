@@ -93,6 +93,7 @@ class InputWidget extends StatefulWidget {
   /// Color options for customizing the widget appearance
   final ColorOptions? colorOptions;
   final Widget? micIcon;
+  final String? hintText;
 
   InputWidget({
     Key? key,
@@ -105,6 +106,7 @@ class InputWidget extends StatefulWidget {
     this.containerMargin,
     this.micIcon,
     this.colorOptions,
+    this.hintText,
   }) : super(key: key);
 
   @override
@@ -365,7 +367,7 @@ class _InputWidgetState extends State<InputWidget> {
             onChanged: _onChangeText,
             decoration: InputDecoration(
               border: InputBorder.none,
-              hintText: "Type a message",
+              hintText: widget.hintText ?? "Type a message",
               hintStyle: TextStyle(
                 color: _colors.hintTextColor,
                 fontSize: 15,
