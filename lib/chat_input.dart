@@ -137,6 +137,18 @@ class _InputWidgetState extends State<InputWidget> {
     super.initState();
     _uuid = const Uuid();
     _initAudioRecorder();
+    _showMike = widget.showMicOverride ?? true;
+  }
+
+  @override
+  void didUpdateWidget(InputWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.showMicOverride != widget.showMicOverride) {
+      setState(() {
+        _showMike =
+            widget.showMicOverride ?? _textEditingController.text.isEmpty;
+      });
+    }
   }
 
   // Initialize the audio recorder

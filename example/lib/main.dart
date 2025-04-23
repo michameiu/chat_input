@@ -146,6 +146,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
           ),
           InputWidget(
+            showMicOverride: false,
             onSendAudio: (audioFile, duration) {
 // Handle sending audio messages
             },
