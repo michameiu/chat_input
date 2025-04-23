@@ -95,6 +95,9 @@ class InputWidget extends StatefulWidget {
   final Widget? micIcon;
   final String? hintText;
 
+  /// Override the default microphone visibility behavior
+  final bool? showMicOverride;
+
   InputWidget({
     Key? key,
     required this.onSendAudio,
@@ -107,6 +110,7 @@ class InputWidget extends StatefulWidget {
     this.micIcon,
     this.colorOptions,
     this.hintText,
+    this.showMicOverride,
   }) : super(key: key);
 
   @override
@@ -147,7 +151,7 @@ class _InputWidgetState extends State<InputWidget> {
   // Handle text input change
   void _onChangeText(String value) {
     setState(() {
-      _showMike = value.isEmpty;
+      _showMike = widget.showMicOverride ?? value.isEmpty;
     });
   }
 
