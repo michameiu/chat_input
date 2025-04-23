@@ -137,7 +137,9 @@ class _InputWidgetState extends State<InputWidget> {
     super.initState();
     _uuid = const Uuid();
     _initAudioRecorder();
-    _showMike = widget.showMicOverride ?? true;
+    _showMike = _textEditingController.text.isEmpty
+        ? (widget.showMicOverride ?? true)
+        : false;
   }
 
   @override
@@ -145,8 +147,9 @@ class _InputWidgetState extends State<InputWidget> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.showMicOverride != widget.showMicOverride) {
       setState(() {
-        _showMike =
-            widget.showMicOverride ?? _textEditingController.text.isEmpty;
+        _showMike = _textEditingController.text.isEmpty
+            ? (widget.showMicOverride ?? true)
+            : false;
       });
     }
   }
@@ -163,7 +166,7 @@ class _InputWidgetState extends State<InputWidget> {
   // Handle text input change
   void _onChangeText(String value) {
     setState(() {
-      _showMike = widget.showMicOverride ?? value.isEmpty;
+      _showMike = value.isEmpty ? (widget.showMicOverride ?? true) : false;
     });
   }
 
